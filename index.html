@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<title>SIGMA-FROTA PM</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&family=Roboto&display=swap" rel="stylesheet">
+
+<style>
+body {
+  margin: 0;
+  font-family: 'Roboto', sans-serif;
+  background: #0A1F44;
+  color: white;
+}
+
+header {
+  background: #08142b;
+  padding: 15px;
+  text-align: center;
+  border-bottom: 2px solid #C8A951;
+}
+
+h1 {
+  font-family: 'Orbitron';
+  color: #C8A951;
+}
+
+.container {
+  padding: 20px;
+}
+
+.card {
+  background: #1C2E5A;
+  padding: 15px;
+  border-radius: 10px;
+  margin-bottom: 15px;
+}
+
+input {
+  padding: 10px;
+  margin: 5px;
+  border-radius: 5px;
+  border: none;
+}
+
+button {
+  padding: 10px 14px;
+  background: #C8A951;
+  border: none;
+  border-radius: 5px;
+  cursor: pointer;
+  margin: 3px;
+}
+
+button:hover {
+  background: #e0c36f;
+}
+
+.viatura {
+  background: #1C2E5A;
+  padding: 15px;
+  margin-top: 10px;
+  border-radius: 10px;
+}
+
+.small {
+  font-size: 12px;
+  color: #ccc;
+}
+
+textarea {
+  width: 100%;
+  height: 60px;
+  margin-top: 5px;
+  border-radius: 5px;
+  border: none;
+  padding: 5px;
+}
+
+.hidden {
+  display: none;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <h1>🚔 SIGMA-FROTA PM</h1>
+</header>
+
+<div class="container">
+
+<!-- LOGIN -->
+<div id="login" class="card">
+  <h3>Acesso ao Sistema</h3>
+  <input id="user" type="text" placeholder="Usuário">
+  <input id="pass" type="password" placeholder="Senha">
+  <button onclick="login()">Entrar</button>
+</div>
+
+<!-- SISTEMA -->
+<div id="app" class="hidden">
+
+  <div class="card">
+    <h3>Nova Viatura</h3>
+    <input id="prefixo" placeholder="PMB-001">
+    <input id="modelo" placeholder="Modelo">
+    <input id="km" type="number" placeholder="KM">
+    <button onclick="add()">Cadastrar</button>
+  </div>
+
+  <div id="lista"></div>
+
+</div>
+
+</div>
+
+<script>
+
+let viaturas = JSON.parse(localStorage.getItem("viaturas") || "[]");
+
+// LOGIN
+function login() {
+  const u = document.getElementById("user").value;
+  const p = document.getElementById("pass").value;
+
+  if (u === "admin" && p === "123") {
+    document.getElementById("login").classList.add("hidden");
+    document.getElementById("app").classList.remove("hidden");
+    render();
+  } else {
+    alert("Acesso negado!");
+  }
+}
+
+// SALVAR
+function salvar() {
+  localStorage.setItem("viaturas", JSON.stringify(viaturas));
+}
+
+// CADASTRAR
+function add() {
+  const prefixo = document.getElementById("prefixo");
+  const modelo = document.getElementById("modelo");
+  const km = document.getElementById("km");
+
+  if (!prefixo.value || !modelo.value || !km.value) {
+    alert("Preencha todos os campos!");
+    return;
+  }
+
+  viaturas.push({
+    id: Date.now(),
+    prefixo: prefixo.value,
+    modelo: modelo.value,
+    km: parseInt(km.value),
+    emServico: false,
+    historico: [],
+    manutencaoMensal: false,
+    melhorias: "",
+    recomendacoes: ""
+  });
+
+  salvar();
+  render();
+
+  prefixo.value = "";
+  modelo.value = "";
+  km.value = "";
+}
+
+// INICIAR SERVIÇO
+function iniciarServico(id) {
+  const v = viaturas.find(x => x.id === id);
+  const desc = prompt("Descreva a atividade:");
+  if (!desc) return;
+
+  v.emServico = true;
+  v.historico.push({
+    data: new Date().toLocaleString(),
+    desc
+  });
+
+  salvar();
+  render();
+}
+
+// FINALIZAR SERVIÇO
+function finalizarServico(id) {
+  const v = viaturas.find(x => x.id === id);
+  v.emServico = false;
+  salvar();
+  render();
+}
+
+// MANUTENÇÃO
+function concluirManutencao(id) {
+  const v = viaturas.find(x => x.id === id);
+  v.manutencaoMensal = true;
+
+  salvar();
+  render();
+
+  alert("✔ Manutenção concluída!");
+}
+
+// MELHORIAS
+function salvarMelhoria(id, texto) {
+  const v = viaturas.find(x => x.id === id);
+  v.melhorias = texto;
+  salvar();
+}
+
+// RECOMENDAÇÕES
+function salvarRecomendacao(id, texto) {
+  const v = viaturas.find(x => x.id === id);
+  v.recomendacoes = texto;
+  salvar();
+}
+
+// RENDER
+function render() {
+  const lista = document.getElementById("lista");
+  lista.innerHTML = "";
+
+  viaturas.forEach(v => {
+
+    const div = document.createElement("div");
+    div.className = "viatura";
+
+    let historico = v.historico.map(h =>
+      `<div class="small">📌 ${h.data} - ${h.desc}</div>`
+    ).join("");
+
+    div.innerHTML = `
+      <strong>${v.prefixo}</strong> - ${v.modelo} (${v.km} km)<br>
+      Status: ${v.emServico ? "🔴 EM SERVIÇO" : "🟢 DISPONÍVEL"}<br><br>
+
+      <button onclick="iniciarServico(${v.id})">▶ Iniciar</button>
+      <button onclick="finalizarServico(${v.id})">✔ Finalizar</button>
+
+      <br><br>
+
+      <strong>Manutenção:</strong><br>
+      <span style="color:${v.manutencaoMensal ? '#00ff88' : '#ffcc00'}; font-weight:bold;">
+        ${v.manutencaoMensal ? '✔ CONCLUÍDA' : '⚠ PENDENTE'}
+      </span><br>
+      <button onclick="concluirManutencao(${v.id})">🔧 Marcar OK</button>
+
+      <br><br>
+      ${historico}
+      <hr>
+
+      <strong>Melhorias</strong>
+      <textarea onblur="salvarMelhoria(${v.id}, this.value)">${v.melhorias}</textarea>
+
+      <strong>Recomendações</strong>
+      <textarea onblur="salvarRecomendacao(${v.id}, this.value)">${v.recomendacoes}</textarea>
+    `;
+
+    lista.appendChild(div);
+  });
+}
+
+</script>
+
+</body>
+</html>
